@@ -6,11 +6,20 @@
 #include <ev.h>
 #include <lcm/lcm.h>
 
+#include <inttypes.h>
 #include <stdlib.h>
 
 
+static inline int64_t ev_utime (struct ev_loop * loop) {
+    return (int64_t) (1e6 * ev_now (loop));
+}
+
+
 static void timeout_cb (EV_P_ ev_timer *w, int revents) {
-    puts ("timeout");
+    printf ("timeout @ t=%f s\t(%" PRId64 " us)\t",
+            ev_now (EV_A), ev_utime (EV_A));
+    // ^XXX^ not sure how I feel about libev using float representation of time
+
     // this causes the innermost ev_run to stop iterating
     ev_break (EV_A_ EVBREAK_ONE);
 }
