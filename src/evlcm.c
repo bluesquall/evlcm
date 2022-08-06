@@ -16,12 +16,9 @@ static inline int64_t ev_utime (struct ev_loop * loop) {
 
 
 static void timeout_cb (EV_P_ ev_timer *w, int revents) {
-    printf ("timeout @ t=%f s\t(%" PRId64 " us)\t",
+    fprintf (stderr, "timeout @ t=%f s\t(%" PRId64 " us)\n",
             ev_now (EV_A), ev_utime (EV_A));
     // ^XXX^ not sure how I feel about libev using float representation of time
-
-    // this causes the innermost ev_run to stop iterating
-    ev_break (EV_A_ EVBREAK_ONE);
 }
 
 
@@ -34,8 +31,8 @@ int main (int argc, char ** argv) {
     }
 
     struct ev_loop *loop = EV_DEFAULT;
-    ev_timer_init (&timeout_watcher, timeout_cb, 5.5, 0.);
-    ev_timer_start (loop, &timeout_watcher);
+    ev_timer_init (&timeout_watcher, timeout_cb, 0., 1e-1);
+    ev_timer_again (loop, &timeout_watcher);
 
     ev_run (loop, 0);
 
