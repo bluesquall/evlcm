@@ -13,15 +13,13 @@
 #include <unistd.h>
 
 
-lcm_t *lcm = NULL; // TODO: make it local instead of global
-
-
 static inline int64_t ev_utime (struct ev_loop * loop) {
     return (int64_t) (1e6 * ev_now (loop));
 }
 
 
 static void timeout_cb (EV_P_ ev_timer *w, int revents) {
+    lcm_t *lcm = (lcm_t*)(w->data);
     evlcm_y_t tx = {0};
     tx.utime = ev_utime (EV_A);
     tx.y = sin ( 2 * M_PI * FREQUENCY * ev_now (EV_A));
@@ -51,12 +49,15 @@ int main (int argc, char ** argv) {
     args.verbosity = 0;
     argp_parse (&argp, argc, argv, 0, 0, &args);
 
-    if (args.verbosity > 0) {
-        puts ("Aloha!");
-    }
+    if (args.verbosity > 0) { puts ("Aloha!"); }
+
+    lcm_t * lcm = lcm_create(NULL);
+    if (!lcm) { exit (EXIT_FAILURE); }
 
     ev_timer timeout_watcher;
     ev_io stdin_watcher;
+
+    timeout_watcher.data = (void *)lcm;
 
     struct ev_loop *loop = EV_DEFAULT;
     ev_timer_init (&timeout_watcher, timeout_cb, 0., 1e-1);
@@ -64,10 +65,6 @@ int main (int argc, char ** argv) {
 
     ev_io_init (&stdin_watcher, stdin_cb, STDIN_FILENO, EV_READ);
     ev_io_start (loop, &stdin_watcher);
-
-    lcm = lcm_create(NULL);
-    if (!lcm)
-        exit (EXIT_FAILURE);
 
     ev_run (loop, 0);
 
