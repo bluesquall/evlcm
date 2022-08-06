@@ -90,7 +90,7 @@ sine_thread_loop(void* data)
   ev_timer timeout_watcher;
   timeout_watcher.data = (void*)lcm;
 
-  struct ev_loop* loop = EV_DEFAULT;
+  struct ev_loop* loop = ev_loop_new(EVFLAG_AUTO);
 
   ev_timer_init(&timeout_watcher, sine_publisher_cb, 0., publish_period);
   ev_timer_again(loop, &timeout_watcher);
@@ -116,7 +116,7 @@ cosine_thread_loop(void* data)
   // ev_timer timeout_watcher;
   // timeout_watcher.data = (void*)lcm;
 
-  struct ev_loop* loop = EV_DEFAULT;
+  struct ev_loop* loop = ev_loop_new(EVFLAG_AUTO);
 
   ev_io_init(&lcm_watcher, lcm_subscriber_cb, lcm_get_fileno(lcm), EV_READ);
   ev_io_start(loop, &lcm_watcher);
@@ -158,14 +158,12 @@ main(int argc, char** argv)
     perror("pthread_create");
   }
 
-  /*
   ev_io stdin_watcher;
   struct ev_loop* loop = EV_DEFAULT;
   ev_io_init(&stdin_watcher, stdin_cb, STDIN_FILENO, EV_READ);
   ev_io_start(loop, &stdin_watcher);
 
   ev_run(loop, 0);
-  */
 
   pthread_exit(NULL);
 
