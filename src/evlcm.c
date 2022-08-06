@@ -1,11 +1,6 @@
 #include "config.h"
 
-#include "evlcm-argp.h"
 #include "evlcm.h"
-#include "evlcm_y_t.h"
-
-#include <ev.h>
-#include <lcm/lcm.h>
 
 #include <inttypes.h>
 #include <math.h>
@@ -19,17 +14,15 @@ ev_utime(struct ev_loop* loop)
 }
 
 static void
-timeout_cb(EV_P_ ev_timer* w, int revents)
+lcm_subscriber_cb(EV_P_ ev_io* w, int revents)
 {
+  if (args.verbosity > 1) {
+    fprintf(stderr, "handling LCM input\n");
+  }
   lcm_t* lcm = (lcm_t*)(w->data);
-  evlcm_y_t tx = { 0 };
-  tx.utime = ev_utime(EV_A);
-  tx.y = sin(2 * M_PI * FREQUENCY * ev_now(EV_A));
-  // N.B. ev_utime and ev_now refer to the same time 
-  //      (as long as called for the same event)
-  evlcm_y_t_publish(lcm, Y_CHANNEL, &tx);
-  if (args.verbosity > 0) {
-    fprintf(stderr, "published y = %f on channel `%s`\n", tx.y, Y_CHANNEL);
+  lcm_handle(lcm);
+  if (args.verbosity > 1) {
+    fprintf(stderr, "\tLCM input handled\n");
   }
 }
 
@@ -48,6 +41,89 @@ stdin_cb(EV_P_ ev_io* w, int revents)
   }
 }
 
+static void
+sine_publisher_cb(EV_P_ ev_timer* w, int revents)
+{
+  lcm_t* lcm = (lcm_t*)(w->data);
+  evlcm_data_t tx = { 0 };
+  tx.utime = ev_utime(EV_A);
+  tx.data = sin(2 * M_PI * FREQUENCY * ev_now(EV_A));
+  // N.B. ev_utime and ev_now refer to the same time
+  //      (as long as called for the same event)
+  evlcm_data_t_publish(lcm, Y_CHANNEL, &tx);
+  if (args.verbosity > 0) {
+    fprintf(stderr, "published y = %f on channel `%s`\n", tx.data, Y_CHANNEL);
+  }
+}
+
+static void
+y_handler(const lcm_recv_buf_t* rbuf,
+          const char* channel,
+          const evlcm_data_t* rx,
+          void* user)
+{
+  ev_timer* w = (ev_timer*)(user);
+  lcm_t* lcm = (lcm_t*)(w->data);
+
+  evlcm_data_t tx = { 0 };
+  tx.utime = tx.utime;
+  // TODO: figure out how to access the `ev_loop` for `ev_utime(EV_A);`
+  tx.data = cos(asin(rx->data));
+  // ^ there's probably a more numerically stable way
+  evlcm_data_t_publish(lcm, X_CHANNEL, &tx);
+  if (args.verbosity > 0) {
+    fprintf(stderr, "published x = %f on channel `%s`\n", tx.data, X_CHANNEL);
+  }
+}
+
+static void
+sine_thread_loop(const double publish_timeout)
+{
+  lcm_t* lcm = lcm_create(NULL);
+  if (!lcm) {
+    exit(EXIT_FAILURE);
+  }
+
+  ev_timer timeout_watcher;
+  timeout_watcher.data = (void*)lcm;
+
+  struct ev_loop* loop = EV_DEFAULT;
+
+  ev_timer_init(&timeout_watcher, sine_publisher_cb, 0., publish_timeout);
+  ev_timer_again(loop, &timeout_watcher);
+
+  ev_run(loop, 0);
+}
+
+static void
+cosine_thread_loop(const double publish_timeout)
+{
+  lcm_t* lcm = lcm_create(NULL);
+  if (!lcm) {
+    exit(EXIT_FAILURE);
+  }
+
+  ev_io lcm_watcher;
+  lcm_watcher.data = (void*)lcm;
+
+  // ev_timer timeout_watcher;
+  // timeout_watcher.data = (void*)lcm;
+
+  struct ev_loop* loop = EV_DEFAULT;
+
+  ev_io_init(&lcm_watcher, lcm_subscriber_cb, lcm_get_fileno(lcm), EV_READ);
+  ev_io_start(loop, &lcm_watcher);
+
+  // ev_timer_init(&timeout_watcher, cosine_publisher_cb, 0., publish_timeout);
+  // ev_timer_again(loop, &timeout_watcher);
+
+  evlcm_data_t_subscription_t* y_sub =
+    evlcm_data_t_subscribe(lcm, Y_CHANNEL, &y_handler, (void*)(&lcm_watcher));
+  evlcm_data_t_subscription_set_queue_capacity(y_sub, 3);
+
+  ev_run(loop, 0);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -58,20 +134,8 @@ main(int argc, char** argv)
     puts("Aloha!");
   }
 
-  lcm_t* lcm = lcm_create(NULL);
-  if (!lcm) {
-    exit(EXIT_FAILURE);
-  }
-
-  ev_timer timeout_watcher;
   ev_io stdin_watcher;
-
-  timeout_watcher.data = (void*)lcm;
-
   struct ev_loop* loop = EV_DEFAULT;
-  ev_timer_init(&timeout_watcher, timeout_cb, 0., 1e-1);
-  ev_timer_again(loop, &timeout_watcher);
-
   ev_io_init(&stdin_watcher, stdin_cb, STDIN_FILENO, EV_READ);
   ev_io_start(loop, &stdin_watcher);
 
