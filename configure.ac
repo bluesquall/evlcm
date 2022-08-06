@@ -12,6 +12,7 @@ AC_CONFIG_FILES([Makefile])
 
 PKG_CHECK_MODULES([LCM], [lcm >= 1.3.0])
 
+AC_SEARCH_LIBS([ev_run],[ev])
 AC_SEARCH_LIBS([lcm_create],[lcm])
 
 AC_PROG_CC
