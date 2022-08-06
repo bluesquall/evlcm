@@ -1,0 +1,16 @@
+.build-aux/
+Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache/
+config.h
+config.h.in
+config.log
+config.status
+configure
+src/.deps/
+src/.dirstamp
+src/*.o
+stamp-h1
+
+evlcm
