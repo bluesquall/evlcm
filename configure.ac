@@ -12,8 +12,13 @@ AC_CONFIG_FILES([Makefile])
 
 PKG_CHECK_MODULES([LCM], [lcm >= 1.3.0])
 
+AC_CHECK_PROG([LCMGEN], [lcm-gen], [lcm-gen], [/bin/false])
+AS_IF([test "${LCMGEN}" == "x/bin/false"],
+      AC_MSG_ERROR([LCM generator `lcm-gen` not found])])
+
 AC_SEARCH_LIBS([ev_run],[ev])
 AC_SEARCH_LIBS([lcm_create],[lcm])
+AC_SEARCH_LIBS([sin],[m])
 
 AC_PROG_CC
 AC_OUTPUT

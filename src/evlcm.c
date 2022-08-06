@@ -2,13 +2,18 @@
 
 #include "evlcm.h"
 #include "evlcm-argp.h"
+#include "evlcm_y_t.h"
 
 #include <ev.h>
 #include <lcm/lcm.h>
 
 #include <inttypes.h>
+#include <math.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+
+lcm_t *lcm = NULL; // TODO: make it local instead of global
 
 
 static inline int64_t ev_utime (struct ev_loop * loop) {
@@ -17,9 +22,14 @@ static inline int64_t ev_utime (struct ev_loop * loop) {
 
 
 static void timeout_cb (EV_P_ ev_timer *w, int revents) {
-    fprintf (stderr, "timeout @ t=%f s\t(%" PRId64 " us)\n",
-            ev_now (EV_A), ev_utime (EV_A));
-    // ^XXX^ not sure how I feel about libev using float representation of time
+    evlcm_y_t tx = {0};
+    tx.utime = ev_utime (EV_A);
+    tx.y = sin ( 2 * M_PI * FREQUENCY * ev_now (EV_A));
+    // N.B. ev_utime and ev_now refer to the same time as long as called for the same event
+    evlcm_y_t_publish(lcm, Y_CHANNEL, &tx);
+    if (args.verbosity > 0) {
+        fprintf(stderr, "published y = %f on channel `%s`\n", tx.y, Y_CHANNEL);
+    }
 }
 
 
@@ -45,16 +55,19 @@ int main (int argc, char ** argv) {
         puts ("Aloha!");
     }
 
-
     ev_timer timeout_watcher;
     ev_io stdin_watcher;
 
     struct ev_loop *loop = EV_DEFAULT;
-    ev_timer_init (&timeout_watcher, timeout_cb, 0., 1.);
+    ev_timer_init (&timeout_watcher, timeout_cb, 0., 1e-1);
     ev_timer_again (loop, &timeout_watcher);
 
     ev_io_init (&stdin_watcher, stdin_cb, STDIN_FILENO, EV_READ);
     ev_io_start (loop, &stdin_watcher);
+
+    lcm = lcm_create(NULL);
+    if (!lcm)
+        exit (EXIT_FAILURE);
 
     ev_run (loop, 0);
 
