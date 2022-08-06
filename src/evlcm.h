@@ -5,6 +5,9 @@
 #define Y_CHANNEL "y"
 #define FREQUENCY 1.2
 
+#define SINE_PUBLISH_PERIOD 1e-2
+#define COSINE_PUBLISH_PERIOD 1e-1
+
 #include "evlcm-argp.h"
 #include "evlcm_data_t.h"
 
@@ -29,10 +32,10 @@ y_handler(const lcm_recv_buf_t* rbuf,
           const evlcm_data_t* rx,
           void* user);
 
-static void
-sine_thread_loop(const double publish_timeout);
+static void*
+sine_thread_loop(void* data);
 
-static void
-cosine_thread_loop(const double publish_timeout);
+static void*
+cosine_thread_loop(void* data);
 
 #endif // _EV_LCM_H_

@@ -4,6 +4,7 @@
 
 #include <inttypes.h>
 #include <math.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -76,9 +77,11 @@ y_handler(const lcm_recv_buf_t* rbuf,
   }
 }
 
-static void
-sine_thread_loop(const double publish_timeout)
+static void*
+sine_thread_loop(void* data)
 {
+  double publish_period = *(double*)data;
+
   lcm_t* lcm = lcm_create(NULL);
   if (!lcm) {
     exit(EXIT_FAILURE);
@@ -89,15 +92,19 @@ sine_thread_loop(const double publish_timeout)
 
   struct ev_loop* loop = EV_DEFAULT;
 
-  ev_timer_init(&timeout_watcher, sine_publisher_cb, 0., publish_timeout);
+  ev_timer_init(&timeout_watcher, sine_publisher_cb, 0., publish_period);
   ev_timer_again(loop, &timeout_watcher);
 
   ev_run(loop, 0);
+
+  pthread_exit(NULL);
 }
 
-static void
-cosine_thread_loop(const double publish_timeout)
+static void*
+cosine_thread_loop(void* data)
 {
+  double publish_period = *(double*)data;
+
   lcm_t* lcm = lcm_create(NULL);
   if (!lcm) {
     exit(EXIT_FAILURE);
@@ -122,6 +129,8 @@ cosine_thread_loop(const double publish_timeout)
   evlcm_data_t_subscription_set_queue_capacity(y_sub, 3);
 
   ev_run(loop, 0);
+
+  pthread_exit(NULL);
 }
 
 int
@@ -134,12 +143,31 @@ main(int argc, char** argv)
     puts("Aloha!");
   }
 
+  double sine_publish_period = SINE_PUBLISH_PERIOD;
+  double cosine_publish_period = COSINE_PUBLISH_PERIOD;
+
+  pthread_t sine_thread, cosine_thread;
+  int sine_thread_create_rc = pthread_create(
+    &sine_thread, NULL, sine_thread_loop, (void*)(&sine_publish_period));
+  if (sine_thread_create_rc != 0) {
+    perror("pthread_create");
+  }
+  int cosine_thread_create_rc = pthread_create(
+    &cosine_thread, NULL, cosine_thread_loop, (void*)(&cosine_publish_period));
+  if (cosine_thread_create_rc != 0) {
+    perror("pthread_create");
+  }
+
+  /*
   ev_io stdin_watcher;
   struct ev_loop* loop = EV_DEFAULT;
   ev_io_init(&stdin_watcher, stdin_cb, STDIN_FILENO, EV_READ);
   ev_io_start(loop, &stdin_watcher);
 
   ev_run(loop, 0);
+  */
+
+  pthread_exit(NULL);
 
   exit(EXIT_SUCCESS);
 }

@@ -19,6 +19,7 @@ AS_IF([test "${LCMGEN}" == "x/bin/false"],
 AC_SEARCH_LIBS([ev_run],[ev])
 AC_SEARCH_LIBS([lcm_create],[lcm])
 AC_SEARCH_LIBS([sin],[m])
+AC_SEARCH_LIBS([pthread_create],[pthread])
 
 AC_PROG_CC
 AC_OUTPUT
