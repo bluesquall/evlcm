@@ -82,7 +82,7 @@ sine_thread_loop(void* data)
 {
   double publish_period = *(double*)data;
 
-  lcm_t* lcm = lcm_create(NULL);
+  lcm_t* lcm = lcm_create("memq://");
   if (!lcm) {
     exit(EXIT_FAILURE);
   }
@@ -105,7 +105,7 @@ cosine_thread_loop(void* data)
 {
   double publish_period = *(double*)data;
 
-  lcm_t* lcm = lcm_create(NULL);
+  lcm_t* lcm = lcm_create("memq://");
   if (!lcm) {
     exit(EXIT_FAILURE);
   }
