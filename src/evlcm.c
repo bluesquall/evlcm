@@ -80,19 +80,14 @@ y_handler(const lcm_recv_buf_t* rbuf,
 static void*
 sine_thread_loop(void* data)
 {
-  double publish_period = *(double*)data;
-
-  lcm_t* lcm = lcm_create("memq://");
-  if (!lcm) {
-    exit(EXIT_FAILURE);
-  }
+  lcm_t* lcm = (lcm_t*)data;
 
   ev_timer timeout_watcher;
   timeout_watcher.data = (void*)lcm;
 
   struct ev_loop* loop = ev_loop_new(EVFLAG_AUTO);
 
-  ev_timer_init(&timeout_watcher, sine_publisher_cb, 0., publish_period);
+  ev_timer_init(&timeout_watcher, sine_publisher_cb, 0., SINE_PUBLISH_PERIOD);
   ev_timer_again(loop, &timeout_watcher);
 
   ev_run(loop, 0);
@@ -103,12 +98,7 @@ sine_thread_loop(void* data)
 static void*
 cosine_thread_loop(void* data)
 {
-  double publish_period = *(double*)data;
-
-  lcm_t* lcm = lcm_create("memq://");
-  if (!lcm) {
-    exit(EXIT_FAILURE);
-  }
+  lcm_t* lcm = (lcm_t*)data;
 
   ev_io lcm_watcher;
   lcm_watcher.data = (void*)lcm;
@@ -143,17 +133,19 @@ main(int argc, char** argv)
     puts("Aloha!");
   }
 
-  double sine_publish_period = SINE_PUBLISH_PERIOD;
-  double cosine_publish_period = COSINE_PUBLISH_PERIOD;
+  lcm_t* lcm = lcm_create("memq://");
+  if (!lcm) {
+    exit(EXIT_FAILURE);
+  }
 
   pthread_t sine_thread, cosine_thread;
   int sine_thread_create_rc = pthread_create(
-    &sine_thread, NULL, sine_thread_loop, (void*)(&sine_publish_period));
+    &sine_thread, NULL, sine_thread_loop, (void*)(lcm));
   if (sine_thread_create_rc != 0) {
     perror("pthread_create");
   }
   int cosine_thread_create_rc = pthread_create(
-    &cosine_thread, NULL, cosine_thread_loop, (void*)(&cosine_publish_period));
+    &cosine_thread, NULL, cosine_thread_loop, (void*)(lcm));
   if (cosine_thread_create_rc != 0) {
     perror("pthread_create");
   }
