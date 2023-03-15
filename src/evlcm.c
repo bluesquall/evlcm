@@ -82,7 +82,14 @@ sine_thread_loop(void* data)
 {
   double publish_period = *(double*)data;
 
-  lcm_t* lcm = lcm_create(NULL);
+  char* provider = getenv("LCM_DEFAULT_URL");
+  if(provider) {
+    printf("sine_thread_loop: using LCM provider %s\n", provider);
+  } else {
+    printf("sine_thread_loop: using LCM provider NULL\n");
+  }
+
+  lcm_t* lcm = lcm_create(provider);
   if (!lcm) {
     exit(EXIT_FAILURE);
   }
@@ -105,7 +112,14 @@ cosine_thread_loop(void* data)
 {
   double publish_period = *(double*)data;
 
-  lcm_t* lcm = lcm_create(NULL);
+  char* provider = getenv("LCM_DEFAULT_URL");
+  if(provider) {
+    printf("cosine_thread_loop: using LCM provider %s\n", provider);
+  } else {
+    printf("cosine_thread_loop: using LCM provider NULL\n");
+  }
+
+  lcm_t* lcm = lcm_create(provider);
   if (!lcm) {
     exit(EXIT_FAILURE);
   }
